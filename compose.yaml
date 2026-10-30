@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: aurel
+      POSTGRES_USER: aurel
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - aurel-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aurel -d aurel"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  app:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      # Local Docker uses HTTP; set NODE_ENV=production behind HTTPS in hosted use.
+      NODE_ENV: development
+      PORT: 3001
+      APP_URL: http://localhost:3001
+      DATABASE_URL: postgresql://aurel:${POSTGRES_PASSWORD}@db:5432/aurel
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@aurel.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  aurel-postgres:
